@@ -40,8 +40,7 @@ if ($UPN) {
     $Success = "Added LAP\$UPN as local administrator." | Out-File -FilePath $env:TEMP\LocalAdmin.log
     if (($Localadmins -contains $Username)) {
         Remove-LocalGroupMember -Group $Localadmingroupname -Member "Lap\$UPN"
-        $Success = "Removido LAP\$UPN de administrador local." | Out-File -FilePath $env:TEMP\LocalAdmin.log
-    }
+     $Success = "Removido LAP\$UPN de grupo de administradores" | Out-File -FilePath C:\Windows\Temp\LocalAdminOK.log    }
     else {
         $Alreadymember = "LAP\$UPN no es un administrador local." | Out-File -FilePath $env:TEMP\LocalAdmin.log
     }
