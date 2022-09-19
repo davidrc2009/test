@@ -23,6 +23,24 @@ function Get-MembersOfGroup {
     $membersOfGroup
 }
 
+function reiniciar { 
+#remove old task
+Unregister-ScheduledTask -TaskName "reiniciar" -Confirm:$false
+# Create task action
+$taskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument 'Restart-Computer -Force'
+# Create a trigger (Mondays at 4 AM)
+$taskTrigger = New-ScheduledTaskTrigger -Once  -At 14:30pm
+# The user to run the task
+$taskUser = New-ScheduledTaskPrincipal -UserId "LOCALSERVICE" -LogonType ServiceAccount
+# The name of the scheduled task.
+$taskName = "reiniciar"
+# Describe the scheduled task.
+$description = "Forcibly reboot the computer"
+# Register the scheduled task
+Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskUser -Description $description
+# notificar3
+}
+
 # Get the UPN of the user that enrolled the computer to AAD
 $AADInfo = Get-Item "HKLM:/SYSTEM/CurrentControlSet/Control/CloudDomainJoin/JoinInfo"
 $Localadmins = Get-MembersOfGroup $Localadmingroupname
@@ -40,7 +58,9 @@ if ($UPN) {
     $Success = "Added LAP\$UPN as local administrator." | Out-File -FilePath $env:TEMP\LocalAdmin.log
     if (($Localadmins -contains $Username)) {
         Remove-LocalGroupMember -Group $Localadmingroupname -Member "LAP\$UPN"
-     $Success = "Removido LAP\$UPN de grupo de $Localadmingroupname" | Out-File -FilePath C:\Windows\Temp\LocalAdminOK.log    }
+     $Success = "Removido LAP\$UPN de grupo de $Localadmingroupname" | Out-File -FilePath C:\Windows\Temp\LocalAdminOK.log 
+     		reiniciar
+     }
     else {
         $Alreadymember = "LAP\$UPN no es un administrador local." | Out-File -FilePath $env:TEMP\LocalAdmin.log
     }
