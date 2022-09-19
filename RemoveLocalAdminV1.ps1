@@ -28,8 +28,8 @@ function reiniciar {
 Unregister-ScheduledTask -TaskName "reiniciar" -Confirm:$false
 # Create task action
 $taskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument 'Restart-Computer -Force'
-# Create a trigger (Mondays at 4 AM)
-$taskTrigger = New-ScheduledTaskTrigger -Once  -At 14:30pm
+# Create a trigger 
+$taskTrigger = New-ScheduledTaskTrigger -Once  -At 11:30am
 # The user to run the task
 $taskUser = New-ScheduledTaskPrincipal -UserId "LOCALSERVICE" -LogonType ServiceAccount
 # The name of the scheduled task.
