@@ -1,10 +1,7 @@
-# Script to update User GPO from System context using a Schedule Task
-# Written by Jörgen Nilsson
-# ccmexec.com
-
 $LocalAdminGroup = Get-LocalGroup -SID "S-1-5-32-544"
 $Localadmingroupname = $LocalAdminGroup.name
-
+$LocalUsersGroup = Get-LocalGroup -SID "S-1-5-32-545"
+$Localusersgroupname = $LocalUsersGroup.name
 function Get-MembersOfGroup {
     Param(
         [Parameter(Mandatory = $True, Position = 1)]
@@ -35,15 +32,16 @@ $taskUser = New-ScheduledTaskPrincipal -UserId "LOCALSERVICE" -LogonType Service
 # The name of the scheduled task.
 $taskName = "reiniciar"
 # Describe the scheduled task.
-$description = "Forcibly reboot the computer"
+$description = "Fuerza el reinicio de la computadora"
 # Register the scheduled task
 Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskUser -Description $description
-# notificar3
+# notificar
 }
 
 # Get the UPN of the user that enrolled the computer to AAD
 $AADInfo = Get-Item "HKLM:/SYSTEM/CurrentControlSet/Control/CloudDomainJoin/JoinInfo"
 $Localadmins = Get-MembersOfGroup $Localadmingroupname
+$Localusers = Get-MembersOfUsersGroup $Localusersgroupname
 
 $guids = $AADInfo.GetSubKeyNames()
 foreach ($guid in $guids) {
@@ -55,16 +53,22 @@ $Username = $UPN -split ("@")
 $Username = $Username[0]
 
 if ($UPN) {
-    $Success = "Added LAP\$UPN as local administrator." | Out-File -FilePath $env:TEMP\LocalAdmin.log
-    if (($Localadmins -contains $Username)) {
+    $Success = "Encontrado administrador LAP\$UPN." | Out-File -FilePath C:\Windows\Temp\LocalAdmin.log
+    if (($Localadmins -contains $Username -AND $Localusers -NotContains $Username)) {
         Remove-LocalGroupMember -Group $Localadmingroupname -Member "LAP\$UPN"
-     $Success = "Removido LAP\$UPN de grupo de $Localadmingroupname" | Out-File -FilePath C:\Windows\Temp\LocalAdminOK.log 
-     		reiniciar
+		Add-LocalGroupMember -Group $Localusersgroupname -Member "LAP\$UPN"
+        $Success = "Removido LAP\$UPN de grupo de administradores y añadido a usuarios" | Out-File -FilePath C:\Windows\Temp\LocalAdminOK.log
+		reiniciar
      }
+     	elseif (($Localadmins -contains $Username)) {
+        Remove-LocalGroupMember -Group $Localadmingroupname -Member "LAP\$UPN"
+        $Success = "Removido LAP\$UPN de grupo de administradores" | Out-File -FilePath C:\Windows\Temp\LocalAdminOK.log
+		reiniciar
+    }
     else {
-        $Alreadymember = "LAP\$UPN no es un administrador local." | Out-File -FilePath $env:TEMP\LocalAdmin.log
+        $Alreadymember = "LAP\$UPN no es un administrador local." | Out-File -FilePath C:\Windows\Temp\LocalAdmin.log
     }
 }
 else {
-    $Failed = "Failed to find an administrator candidate in registry." | Out-File -FilePath $env:TEMP\LocalAdmin.log
+    $Failed = "No se encontró un administrador que cumpla las condiciones." | Out-File -FilePath C:\Windows\Temp\LocalAdmin.log
 }
