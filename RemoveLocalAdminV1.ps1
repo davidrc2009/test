@@ -2,6 +2,8 @@ $LocalAdminGroup = Get-LocalGroup -SID "S-1-5-32-544"
 $Localadmingroupname = $LocalAdminGroup.name
 $LocalUsersGroup = Get-LocalGroup -SID "S-1-5-32-545"
 $Localusersgroupname = $LocalUsersGroup.name
+
+# Función para obtener miembros de los grupos
 function Get-MembersOfGroup {
     Param(
         [Parameter(Mandatory = $True, Position = 1)]
@@ -20,25 +22,25 @@ function Get-MembersOfGroup {
     $membersOfGroup
 }
 
+# Función que crea una tarea programada para reiniciar Windows a una hora específica
 function reiniciar { 
-#remove old task
+#remueve tarea si ya existe
 Unregister-ScheduledTask -TaskName "reiniciar" -Confirm:$false
-# Create task action
+# Crea la acción
 $taskAction = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument 'Restart-Computer -Force'
-# Create a trigger 
+# Crea el disparador con la hora específica
 $taskTrigger = New-ScheduledTaskTrigger -Once  -At 11:30am
-# The user to run the task
+# Se indica el usuario con el que se va ejecutar la tarea (LOCALSERVICE)
 $taskUser = New-ScheduledTaskPrincipal -UserId "LOCALSERVICE" -LogonType ServiceAccount
-# The name of the scheduled task.
+# El nombre de la tarea
 $taskName = "reiniciar"
-# Describe the scheduled task.
+# Descripción de la tarea.
 $description = "Fuerza el reinicio de la computadora"
-# Register the scheduled task
+# Registra la tarea programada
 Register-ScheduledTask -TaskName $taskName -Action $taskAction -Trigger $taskTrigger -Principal $taskUser -Description $description
-# notificar
 }
 
-# Get the UPN of the user that enrolled the computer to AAD
+# Obtine el UPN del usuario que enrolo el dispositivo a Azure AD
 $AADInfo = Get-Item "HKLM:/SYSTEM/CurrentControlSet/Control/CloudDomainJoin/JoinInfo"
 $Localadmins = Get-MembersOfGroup $Localadmingroupname
 $Localusers = Get-MembersOfUsersGroup $Localusersgroupname
@@ -52,6 +54,7 @@ foreach ($guid in $guids) {
 $Username = $UPN -split ("@")
 $Username = $Username[0]
 
+# Condicionales
 if ($UPN) {
     $Success = "Encontrado administrador LAP\$UPN." | Out-File -FilePath C:\Windows\Temp\LocalAdmin.log
     if (($Localadmins -contains $Username -AND $Localusers -NotContains $Username)) {
